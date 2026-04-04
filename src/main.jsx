@@ -7,39 +7,47 @@ import { AuthProvider as DescopeAuthProvider } from '@descope/react-sdk';
 
 const DESCOPE_PROJECT_ID = import.meta.env.VITE_DESCOPE_PROJECT_ID;
 
-// Disable inspect mode if VITE_DISABLE_DEVTOOLS is true
-if (import.meta.env.VITE_DISABLE_DEVTOOLS === 'true') {
+// Disable developer tools if VITE_BLOCK_DEVELOPER_TOOLS is true
+// Disable developer tools if VITE_BLOCK_DEVELOPER_TOOLS is true
+if (import.meta.env.VITE_BLOCK_DEVELOPER_TOOLS === 'true') {
   // Disable right-click context menu
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   
   // Disable keyboard shortcuts for DevTools
   document.addEventListener('keydown', (e) => {
-    // F12
+    // F12 key
     if (e.key === 'F12') {
       e.preventDefault();
       return false;
     }
-    // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
-    if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase())) {
+    // Ctrl+Shift+I, J, C, K or Cmd+Option+I, J, C, K
+    if ((e.ctrlKey || e.metaKey) && (e.shiftKey || e.altKey) && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase())) {
       e.preventDefault();
       return false;
     }
-    // Ctrl+U (View Source)
-    if (e.ctrlKey && e.key.toUpperCase() === 'U') {
+    // Ctrl+U or Cmd+U (View Source)
+    if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'U') {
+      e.preventDefault();
+      return false;
+    }
+    // Ctrl+S, Ctrl+P or Cmd+S, Cmd+P
+    if ((e.ctrlKey || e.metaKey) && (e.key.toUpperCase() === 'S' || e.key.toUpperCase() === 'P')) {
       e.preventDefault();
       return false;
     }
   });
 
-  // Detect DevTools open (basic detection)
-  const detectDevTools = () => {
-    const threshold = 160;
-    if (window.outerWidth - window.innerWidth > threshold || 
-        window.outerHeight - window.innerHeight > threshold) {
-      document.body.innerHTML = '<h1 style="text-align:center;margin-top:50px;">DevTools is disabled</h1>';
-    }
+  // Try to prevent console debugging
+  const preventConsole = () => {
+    try {
+      const devtools = /./;
+      devtools.toString = function() {
+        this.opened = true;
+      };
+      console.log('%c', devtools);
+    } catch (e) {}
   };
-  setInterval(detectDevTools, 1000);
+  setInterval(preventConsole, 1000);
 }
 
 createRoot(document.getElementById('root')).render(
