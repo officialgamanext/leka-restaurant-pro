@@ -7,8 +7,9 @@ import ThermalBill from '../components/Billing/ThermalBill';
 import { printThermalBill, printKOT, connectBluetoothPrinter, isBluetoothConnected, isMobile, isWebBluetoothAvailable } from '../utils/qzPrint';
 import { useAuth } from '../context/AuthContext';
 import { usePrinter } from '../context/PrinterContext';
+import { ENABLE_AGGREGATORS } from '../config/features';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 24;
 
 const BillingPage = () => {
   const { selectedRestaurant } = useAuth();
