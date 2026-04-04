@@ -1322,7 +1322,7 @@ const BillingPage = () => {
                 </div>
 
                 {/* Tables Grid */}
-                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-3 gap-1.5 flex-1 overflow-y-auto pr-1 scrollbar-thin content-start">
+                <div className="grid grid-cols-6 sm:grid-cols-6 lg:grid-cols-3 gap-1.5 flex-1 overflow-y-auto pr-1 scrollbar-thin content-start">
                   {filteredTables.map(table => {
                     const openBillsCount = bills.filter(bill => bill.tableId === table.id && bill.status === 'open').length;
                     return (
