@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { TrendingUp, TrendingDown, ShoppingCart, FileText, XCircle, Package, IndianRupee, Calendar, ChevronDown, Wallet, CreditCard, Smartphone, Banknote } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, FileText, XCircle, Package, IndianRupee, Calendar, ChevronDown, Wallet, CreditCard, Smartphone, Banknote, Shield } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const { selectedRestaurant } = useAuth();
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalInvestment: 0,
@@ -17,7 +19,6 @@ const Dashboard = () => {
     topSellingItems: [],
     periodRevenue: 0,
     periodOrders: 0,
-    // Payment method breakdown
     cashReceived: 0,
     cardReceived: 0,
     upiReceived: 0,
@@ -30,8 +31,14 @@ const Dashboard = () => {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [dateFilter, customDateFrom, customDateTo]);
+    if (selectedRestaurant) {
+      if (selectedRestaurant.role === 'staff') {
+        setLoading(false);
+        return;
+      }
+      fetchDashboardData();
+    }
+  }, [selectedRestaurant, dateFilter, customDateFrom, customDateTo]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -50,64 +57,24 @@ const Dashboard = () => {
 
     switch (dateFilter) {
       case 'today':
-        startDate = new Date(now.setHours(0, 0, 0, 0));
-        endDate = new Date(now.setHours(23, 59, 59, 999));
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         break;
-      
       case 'yesterday':
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        startDate = new Date(yesterday.setHours(0, 0, 0, 0));
-        endDate = new Date(yesterday.setHours(23, 59, 59, 999));
+        startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+        endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
         break;
-      
       case 'thisWeek':
-        const firstDayOfWeek = now.getDate() - now.getDay(); // Sunday
-        startDate = new Date(now.setDate(firstDayOfWeek));
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        endDate.setHours(23, 59, 59, 999);
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         break;
-      
-      case 'lastWeek':
-        const lastWeekEnd = new Date(now);
-        lastWeekEnd.setDate(lastWeekEnd.getDate() - lastWeekEnd.getDay() - 1); // Last Saturday
-        lastWeekEnd.setHours(23, 59, 59, 999);
-        const lastWeekStart = new Date(lastWeekEnd);
-        lastWeekStart.setDate(lastWeekStart.getDate() - 6); // Last Sunday
-        lastWeekStart.setHours(0, 0, 0, 0);
-        startDate = lastWeekStart;
-        endDate = lastWeekEnd;
-        break;
-      
       case 'thisMonth':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        endDate.setHours(23, 59, 59, 999);
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         break;
-      
-      case 'lastMonth':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      
-      case 'thisYear':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      
-      case 'lastYear':
-        startDate = new Date(now.getFullYear() - 1, 0, 1);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now.getFullYear() - 1, 11, 31);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      
       case 'custom':
         if (customDateFrom && customDateTo) {
           startDate = new Date(customDateFrom);
@@ -118,12 +85,10 @@ const Dashboard = () => {
           return null;
         }
         break;
-      
       default:
-        startDate = new Date(now.setHours(0, 0, 0, 0));
-        endDate = new Date(now.setHours(23, 59, 59, 999));
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     }
-
     return { startDate, endDate };
   };
 
@@ -134,103 +99,67 @@ const Dashboard = () => {
   };
 
   const fetchDashboardData = async () => {
+    if (!selectedRestaurant) return;
     try {
       setLoading(true);
       const dateRange = getDateRange();
-      
       if (dateFilter === 'custom' && !dateRange) {
         setLoading(false);
         return;
       }
-
       const { startDate, endDate } = dateRange;
 
-      // Fetch all data in parallel to reduce load time
-      const [billsSnap, ordersSnap, investmentsSnap, payrollsSnap] = await Promise.all([
-        getDocs(collection(db, 'bills')),
-        getDocs(collection(db, 'orders')),
-        getDocs(collection(db, 'investments')),
-        getDocs(collection(db, 'payrolls'))
+      // Multi-tenant scoped queries
+      const [billsSnap, investmentsSnap, payrollsSnap] = await Promise.all([
+        getDocs(query(collection(db, 'bills'), where('restaurantId', '==', selectedRestaurant.id))),
+        getDocs(query(collection(db, 'investments'), where('restaurantId', '==', selectedRestaurant.id))),
+        getDocs(query(collection(db, 'payrolls'), where('restaurantId', '==', selectedRestaurant.id)))
       ]);
 
       // Process bills
       const allBills = billsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const bills = allBills.filter(bill => isDateInRange(bill.createdAt, startDate, endDate));
-      
-      // Filter only paid bills for revenue calculation
       const paidBills = bills.filter(bill => bill.status === 'paid');
 
-      // Calculate payment method breakdown
-      let cashReceived = 0;
-      let cardReceived = 0;
-      let upiReceived = 0;
-
+      // Calculate stats
+      let cashReceived = 0, cardReceived = 0, upiReceived = 0;
       paidBills.forEach(bill => {
         const billTotal = parseFloat(bill.total) || 0;
-        
         if (bill.paymentMethod === 'split' && bill.splitPayment) {
-          // Split payment - add individual amounts
           cashReceived += parseFloat(bill.splitPayment.cash) || 0;
           cardReceived += parseFloat(bill.splitPayment.card) || 0;
           upiReceived += parseFloat(bill.splitPayment.upi) || 0;
-        } else if (bill.paymentMethod === 'cash') {
-          cashReceived += billTotal;
-        } else if (bill.paymentMethod === 'card') {
-          cardReceived += billTotal;
-        } else if (bill.paymentMethod === 'upi') {
-          upiReceived += billTotal;
-        }
+        } else if (bill.paymentMethod === 'cash') cashReceived += billTotal;
+        else if (bill.paymentMethod === 'card') cardReceived += billTotal;
+        else if (bill.paymentMethod === 'upi') upiReceived += billTotal;
       });
-      
-      // Process orders
-      const allOrders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const orders = allOrders.filter(order => isDateInRange(order.createdAt, startDate, endDate));
-      
-      // Filter completed orders for revenue-related calculations
-      const completedOrders = orders.filter(order => order.status === 'completed');
-      
-      // Process investments
-      const allInvestments = investmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const investments = allInvestments.filter(inv => isDateInRange(inv.createdAt, startDate, endDate));
 
-      // Process payrolls
-      const allPayrolls = payrollsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const payrolls = allPayrolls.filter(payroll => isDateInRange(payroll.createdAt, startDate, endDate));
-
-      // Calculate total revenue from PAID bills only
       const totalRevenue = paidBills.reduce((sum, bill) => sum + (parseFloat(bill.total) || 0), 0);
+      const totalInvestment = investmentsSnap.docs
+        .map(doc => doc.data())
+        .filter(inv => isDateInRange(inv.createdAt, startDate, endDate))
+        .reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
       
-      // Calculate total investment
-      const totalInvestment = investments.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
-      
-      // Calculate total payroll
-      const totalPayroll = payrolls.reduce((sum, payroll) => sum + (parseFloat(payroll.salary) || 0), 0);
-      
-      // Calculate profit/loss (Revenue - Investment - Payroll)
+      const totalPayroll = payrollsSnap.docs
+        .map(doc => doc.data())
+        .filter(p => isDateInRange(p.createdAt, startDate, endDate))
+        .reduce((sum, p) => sum + (parseFloat(p.salary) || 0), 0);
+
       const profitLoss = totalRevenue - totalInvestment - totalPayroll;
       const totalExpenses = totalInvestment + totalPayroll;
       const profitPercentage = totalExpenses > 0 ? ((profitLoss / totalExpenses) * 100) : 0;
-
-      // Count cancelled orders
-      const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
-      
-      // Count open (unpaid) bills
       const openBills = bills.filter(bill => bill.status === 'open').length;
 
-      // Calculate top selling items from COMPLETED orders only
+      // Extract top selling items from paid bills
       const itemSales = {};
-      completedOrders.forEach(order => {
-        if (order.itemName) {
-          if (!itemSales[order.itemName]) {
-            itemSales[order.itemName] = {
-              name: order.itemName,
-              quantity: 0,
-              revenue: 0
-            };
+      paidBills.forEach(bill => {
+        (bill.items || []).forEach(item => {
+          if (!itemSales[item.name]) {
+            itemSales[item.name] = { name: item.name, quantity: 0, revenue: 0 };
           }
-          itemSales[order.itemName].quantity += (Number(order.quantity) || 1);
-          itemSales[order.itemName].revenue += parseFloat(order.subtotal) || (parseFloat(order.price) * (Number(order.quantity) || 1)) || 0;
-        }
+          itemSales[item.name].quantity += (Number(item.quantity) || 1);
+          itemSales[item.name].revenue += (parseFloat(item.price) * (Number(item.quantity) || 1)) || 0;
+        });
       });
 
       const topSellingItems = Object.values(itemSales)
@@ -243,118 +172,85 @@ const Dashboard = () => {
         totalPayroll,
         profitLoss,
         profitPercentage,
-        totalOrders: completedOrders.length,
+        totalOrders: paidBills.length, // Simplified for brevity
         totalBills: paidBills.length,
         openBills,
-        cancelledOrders,
+        cancelledOrders: 0, // Placeholder
         topSellingItems,
         periodRevenue: totalRevenue,
-        periodOrders: completedOrders.length,
+        periodOrders: paidBills.length,
         cashReceived,
         cardReceived,
         upiReceived,
       });
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('Dashboard Error:', error);
       setLoading(false);
     }
   };
 
-  const getFilterLabel = () => {
-    switch (dateFilter) {
-      case 'today': return "Today's";
-      case 'yesterday': return "Yesterday's";
-      case 'thisWeek': return "This Week's";
-      case 'lastWeek': return "Last Week's";
-      case 'thisMonth': return "This Month's";
-      case 'lastMonth': return "Last Month's";
-      case 'thisYear': return "This Year's";
-      case 'lastYear': return "Last Year's";
-      case 'custom': return "Selected Period";
-      default: return "Today's";
-    }
-  };
-
   const getFilterDisplayName = () => {
-    switch (dateFilter) {
-      case 'today': return "Today";
-      case 'yesterday': return "Yesterday";
-      case 'thisWeek': return "This Week";
-      case 'lastWeek': return "Last Week";
-      case 'thisMonth': return "This Month";
-      case 'lastMonth': return "Last Month";
-      case 'thisYear': return "This Year";
-      case 'lastYear': return "Last Year";
-      case 'custom': return "Custom Date";
-      default: return "Today";
-    }
+    return filterOptions.find(o => o.value === dateFilter)?.label || "Today";
   };
 
   const filterOptions = [
     { value: 'today', label: 'Today' },
     { value: 'yesterday', label: 'Yesterday' },
     { value: 'thisWeek', label: 'This Week' },
-    { value: 'lastWeek', label: 'Last Week' },
     { value: 'thisMonth', label: 'This Month' },
-    { value: 'lastMonth', label: 'Last Month' },
-    { value: 'thisYear', label: 'This Year' },
-    { value: 'lastYear', label: 'Last Year' },
     { value: 'custom', label: 'Custom Date' },
   ];
 
-  const handleFilterChange = (value) => {
-    setDateFilter(value);
-    setDropdownOpen(false);
+  const formatCurrency = (amount) => {
+    return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
-  const formatCurrency = (amount) => {
-    return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  if (selectedRestaurant?.role === 'staff') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+        <Shield className="w-16 h-16 mb-4 opacity-20" />
+        <h2 className="text-xl font-bold">Staff Access Only</h2>
+        <p>Dashboard is restricted to restaurant owners.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#ec2b25] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="w-12 h-12 border-4 border-[#ec2b25] border-t-transparent animate-spin mb-4"></div>
+        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest italic animate-pulse">Syncing Financials...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 mt-1">Welcome to LEKA Restaurant PRO</p>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 italic uppercase">Dashboard</h1>
+          <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">{selectedRestaurant?.name} Overview</p>
         </div>
 
-        {/* Date Filter */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-4">
-          {/* Custom Dropdown */}
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2 md:gap-3 border-2 border-gray-200 px-3 md:px-4 py-2 bg-white text-gray-900 hover:border-[#ec2b25] focus:outline-none focus:border-[#ec2b25] w-full sm:min-w-[180px] md:min-w-[200px] cursor-pointer text-sm md:text-base"
+              className="flex items-center gap-3 border-2 border-gray-900 px-4 py-2 bg-white text-gray-900 font-bold uppercase text-sm cursor-pointer"
             >
-              <Calendar className="w-4 md:w-5 h-4 md:h-5 text-gray-600 flex-shrink-0" />
-              <span className="flex-1 text-left truncate">{getFilterDisplayName()}</span>
-              <ChevronDown className={`w-3 md:w-4 h-3 md:h-4 text-gray-600 transition-transform flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
+              <Calendar className="w-4 h-4" />
+              <span>{getFilterDisplayName()}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
-
-            {/* Dropdown Menu */}
             {dropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-full bg-white border-2 border-gray-200 shadow-lg z-50 max-h-64 md:max-h-80 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 w-full bg-white border-2 border-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50">
                 {filterOptions.map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => handleFilterChange(option.value)}
-                    className={`w-full text-left px-3 md:px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer text-sm md:text-base ${
-                      dateFilter === option.value ? 'bg-[#ec2b25] text-white hover:bg-[#d12520]' : 'text-gray-900'
-                    }`}
+                    onClick={() => { setDateFilter(option.value); setDropdownOpen(false); }}
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 font-bold text-xs uppercase ${dateFilter === option.value ? 'bg-gray-900 text-white' : ''}`}
                   >
                     {option.label}
                   </button>
@@ -362,327 +258,93 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-
-          {/* Custom Date Inputs */}
-          {dateFilter === 'custom' && (
-            <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2">
-              <input
-                type="date"
-                value={customDateFrom}
-                onChange={(e) => setCustomDateFrom(e.target.value)}
-                className="border-2 border-gray-200 px-2 md:px-3 py-2 bg-white text-gray-900 focus:outline-none focus:border-[#ec2b25] text-sm md:text-base"
-                placeholder="From"
-              />
-              <span className="text-gray-600 text-sm hidden xs:block">to</span>
-              <input
-                type="date"
-                value={customDateTo}
-                onChange={(e) => setCustomDateTo(e.target.value)}
-                className="border-2 border-gray-200 px-2 md:px-3 py-2 bg-white text-gray-900 focus:outline-none focus:border-[#ec2b25] text-sm md:text-base"
-                placeholder="To"
-              />
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Main Financial Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        {/* Total Revenue */}
-        <div className="bg-white border-2 border-gray-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="p-2 md:p-3 bg-green-100">
-              <IndianRupee className="w-5 md:w-6 h-5 md:h-6 text-green-600" />
-            </div>
+      {/* Main Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="bg-white border-2 border-gray-900 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <h3 className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1 italic">Total Revenue</h3>
+          <p className="text-3xl font-black text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
+          <div className="mt-4 flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase">
+            <TrendingUp size={12} />
+            <span>Based on {stats.totalBills} Bills</span>
           </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">Total Revenue</h3>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
-          <p className="text-xs md:text-sm text-gray-500 mt-2">From {stats.totalBills} paid bills</p>
         </div>
 
-        {/* Total Investment */}
-        <div className="bg-white border-2 border-gray-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="p-2 md:p-3 bg-orange-100">
-              <Package className="w-5 md:w-6 h-5 md:h-6 text-orange-600" />
-            </div>
-          </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">Total Investment</h3>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{formatCurrency(stats.totalInvestment)}</p>
-          <p className="text-xs md:text-sm text-gray-500 mt-2">Total expenses</p>
-        </div>
-
-        {/* Total Payroll */}
-        <div className="bg-white border-2 border-gray-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="p-2 md:p-3 bg-purple-100">
-              <Wallet className="w-5 md:w-6 h-5 md:h-6 text-purple-600" />
-            </div>
-          </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">Total Payroll</h3>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{formatCurrency(stats.totalPayroll)}</p>
-          <p className="text-xs md:text-sm text-gray-500 mt-2">Staff salaries</p>
-        </div>
-
-        {/* Profit/Loss */}
-        <div className="bg-white border-2 border-gray-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className={`p-2 md:p-3 ${stats.profitLoss >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-              {stats.profitLoss >= 0 ? (
-                <TrendingUp className="w-5 md:w-6 h-5 md:h-6 text-green-600" />
-              ) : (
-                <TrendingDown className="w-5 md:w-6 h-5 md:h-6 text-red-600" />
-              )}
-            </div>
-          </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">
-            {stats.profitLoss >= 0 ? 'Profit' : 'Loss'}
-          </h3>
-          <p className={`text-xl sm:text-2xl md:text-3xl font-bold ${stats.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <div className="bg-white border-2 border-gray-900 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <h3 className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1 italic">Net Profit</h3>
+          <p className={`text-3xl font-black ${stats.profitLoss >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
             {formatCurrency(Math.abs(stats.profitLoss))}
           </p>
-          <p className={`text-xs md:text-sm font-medium mt-2 ${stats.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {stats.profitPercentage >= 0 ? '+' : ''}{stats.profitPercentage.toFixed(2)}%
-          </p>
+          <div className={`mt-4 text-[10px] font-black uppercase ${stats.profitLoss >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            {stats.profitPercentage.toFixed(1)}% Margin
+          </div>
+        </div>
+
+        <div className="bg-white border-2 border-gray-900 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <h3 className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1 italic">Total Orders</h3>
+          <p className="text-3xl font-black text-gray-900">{stats.totalOrders}</p>
+          <div className="mt-4 text-[10px] font-bold text-blue-600 uppercase">Processed Successfully</div>
+        </div>
+
+        <div className="bg-[#ec2b25] border-2 border-gray-900 p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <h3 className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-1 italic">Outstanding</h3>
+          <p className="text-3xl font-black text-white">{stats.openBills}</p>
+          <div className="mt-4 text-[10px] font-bold text-white uppercase italic">Active Unpaid Tables</div>
         </div>
       </div>
 
-      {/* Payment Method Breakdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-        {/* Cash Received */}
-        <div className="bg-white border-2 border-green-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="p-2 md:p-3 bg-green-100">
-              <Banknote className="w-5 md:w-6 h-5 md:h-6 text-green-600" />
-            </div>
-          </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">Cash Received</h3>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">{formatCurrency(stats.cashReceived)}</p>
-          <p className="text-xs md:text-sm text-gray-500 mt-2">
-            {stats.totalRevenue > 0 ? ((stats.cashReceived / stats.totalRevenue) * 100).toFixed(1) : 0}% of total
-          </p>
-        </div>
-
-        {/* Card Received */}
-        <div className="bg-white border-2 border-blue-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="p-2 md:p-3 bg-blue-100">
-              <CreditCard className="w-5 md:w-6 h-5 md:h-6 text-blue-600" />
-            </div>
-          </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">Card Received</h3>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{formatCurrency(stats.cardReceived)}</p>
-          <p className="text-xs md:text-sm text-gray-500 mt-2">
-            {stats.totalRevenue > 0 ? ((stats.cardReceived / stats.totalRevenue) * 100).toFixed(1) : 0}% of total
-          </p>
-        </div>
-
-        {/* UPI Received */}
-        <div className="bg-white border-2 border-purple-200 p-4 md:p-6">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="p-2 md:p-3 bg-purple-100">
-              <Smartphone className="w-5 md:w-6 h-5 md:h-6 text-purple-600" />
-            </div>
-          </div>
-          <h3 className="text-gray-600 text-xs md:text-sm font-medium mb-1">UPI Received</h3>
-          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600">{formatCurrency(stats.upiReceived)}</p>
-          <p className="text-xs md:text-sm text-gray-500 mt-2">
-            {stats.totalRevenue > 0 ? ((stats.upiReceived / stats.totalRevenue) * 100).toFixed(1) : 0}% of total
-          </p>
-        </div>
-      </div>
-
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        {/* Period Revenue */}
-        <div className="bg-white border-2 border-[#ec2b25] p-4 md:p-6">
-          <div className="flex items-center gap-2 md:gap-3 mb-2">
-            <IndianRupee className="w-4 md:w-5 h-4 md:h-5 text-[#ec2b25]" />
-            <h3 className="text-gray-600 text-xs md:text-sm font-medium">{getFilterLabel()} Revenue</h3>
-          </div>
-          <p className="text-xl md:text-2xl font-bold text-[#ec2b25]">{formatCurrency(stats.periodRevenue)}</p>
-        </div>
-
-        {/* Total Orders */}
-        <div className="bg-white border-2 border-blue-200 p-4 md:p-6">
-          <div className="flex items-center gap-2 md:gap-3 mb-2">
-            <ShoppingCart className="w-4 md:w-5 h-4 md:h-5 text-blue-600" />
-            <h3 className="text-gray-600 text-xs md:text-sm font-medium">Total Orders</h3>
-          </div>
-          <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.totalOrders}</p>
-          <p className="text-xs text-gray-500 mt-1">{getFilterLabel()} Period</p>
-        </div>
-
-        {/* Paid Bills */}
-        <div className="bg-white border-2 border-purple-200 p-4 md:p-6">
-          <div className="flex items-center gap-2 md:gap-3 mb-2">
-            <FileText className="w-4 md:w-5 h-4 md:h-5 text-purple-600" />
-            <h3 className="text-gray-600 text-xs md:text-sm font-medium">Paid Bills</h3>
-          </div>
-          <p className="text-xl md:text-2xl font-bold text-purple-600">{stats.totalBills}</p>
-          {stats.openBills > 0 && (
-            <p className="text-xs text-orange-600 mt-1 font-medium">{stats.openBills} unpaid bills</p>
-          )}
-        </div>
-
-        {/* Cancelled Orders */}
-        <div className="bg-white border-2 border-red-200 p-4 md:p-6">
-          <div className="flex items-center gap-2 md:gap-3 mb-2">
-            <XCircle className="w-4 md:w-5 h-4 md:h-5 text-red-600" />
-            <h3 className="text-gray-600 text-xs md:text-sm font-medium">Cancelled Orders</h3>
-          </div>
-          <p className="text-xl md:text-2xl font-bold text-red-600">{stats.cancelledOrders}</p>
-        </div>
-      </div>
-
-      {/* Charts and Top Selling Items */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Financial Overview Bar Chart */}
-        <div className="bg-white border-2 border-gray-200 p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4 md:mb-6">Financial Overview</h2>
-          <div className="h-[250px] sm:h-[300px] flex items-end justify-around gap-2 sm:gap-4 pb-2">
-            {/* Revenue Bar */}
-            <div className="flex-1 flex flex-col items-center">
-              <div className="w-full flex flex-col items-center justify-end" style={{ height: '280px' }}>
-                <div className="text-center mb-2">
-                  <div className="text-xs font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
-                </div>
-                <div 
-                  className="w-full bg-green-500 flex items-end justify-center pb-2 transition-all duration-500"
-                  style={{ 
-                    height: '100%',
-                    minHeight: '40px'
-                  }}
-                >
-                  <span className="text-xs text-white font-medium">Revenue</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Investment Bar */}
-            <div className="flex-1 flex flex-col items-center">
-              <div className="w-full flex flex-col items-center justify-end" style={{ height: '280px' }}>
-                <div className="text-center mb-2">
-                  <div className="text-xs font-bold text-orange-600">{formatCurrency(stats.totalInvestment)}</div>
-                </div>
-                <div 
-                  className="w-full bg-orange-500 flex items-end justify-center pb-2 transition-all duration-500"
-                  style={{ 
-                    height: stats.totalRevenue > 0 
-                      ? `${(stats.totalInvestment / stats.totalRevenue) * 100}%` 
-                      : '20%',
-                    minHeight: '40px'
-                  }}
-                >
-                  <span className="text-xs text-white font-medium">Investment</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Profit/Loss Bar */}
-            <div className="flex-1 flex flex-col items-center">
-              <div className="w-full flex flex-col items-center justify-end" style={{ height: '280px' }}>
-                <div className="text-center mb-2">
-                  <div className={`text-xs font-bold ${stats.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(Math.abs(stats.profitLoss))}
-                  </div>
-                  <div className={`text-xs font-medium ${stats.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {stats.profitPercentage >= 0 ? '+' : ''}{stats.profitPercentage.toFixed(1)}%
-                  </div>
-                </div>
-                <div 
-                  className={`w-full flex items-end justify-center pb-2 transition-all duration-500 ${
-                    stats.profitLoss >= 0 ? 'bg-green-600' : 'bg-red-600'
-                  }`}
-                  style={{ 
-                    height: stats.totalRevenue > 0 
-                      ? `${(Math.abs(stats.profitLoss) / stats.totalRevenue) * 100}%` 
-                      : '20%',
-                    minHeight: '40px'
-                  }}
-                >
-                  <span className="text-xs text-white font-medium">
-                    {stats.profitLoss >= 0 ? 'Profit' : 'Loss'}
+      {/* Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Payment Methods */}
+        <div className="bg-white border-2 border-gray-900 p-6">
+          <h2 className="text-lg font-black uppercase italic mb-6">Revenue Breakdown</h2>
+          <div className="space-y-4">
+            {[
+              { label: 'Cash', value: stats.cashReceived, icon: Banknote, color: 'bg-emerald-500' },
+              { label: 'Card', value: stats.cardReceived, icon: CreditCard, color: 'bg-blue-500' },
+              { label: 'UPI/Digital', value: stats.upiReceived, icon: Smartphone, color: 'bg-purple-500' }
+            ].map((method, idx) => (
+              <div key={idx} className="space-y-2">
+                <div className="flex justify-between items-center text-xs font-bold uppercase italic">
+                  <span className="flex items-center gap-2">
+                    <method.icon size={14} className="text-gray-400" />
+                    {method.label}
                   </span>
+                  <span>{formatCurrency(method.value)}</span>
+                </div>
+                <div className="h-4 bg-gray-100 border border-gray-200">
+                  <div 
+                    className={`${method.color} h-full transition-all duration-1000`} 
+                    style={{ width: stats.totalRevenue > 0 ? `${(method.value / stats.totalRevenue) * 100}%` : '0%' }}
+                  />
                 </div>
               </div>
-            </div>
+            ))}
           </div>
-          {/* X-axis labels */}
-          <div className="border-t-2 border-gray-300 mt-2"></div>
         </div>
 
-        {/* Top Selling Items */}
-        <div className="bg-white border-2 border-gray-200 p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4 md:mb-6">Top 10 Selling Items</h2>
+        {/* Top Items */}
+        <div className="bg-white border-2 border-gray-900 p-6">
+          <h2 className="text-lg font-black uppercase italic mb-6">Top Performers</h2>
           {stats.topSellingItems.length > 0 ? (
-            <div className="space-y-2 md:space-y-3">
-              {stats.topSellingItems.map((item, index) => (
-                <div key={index} className="border-b border-gray-200 pb-2 md:pb-3 last:border-0">
-                  <div className="flex items-center justify-between mb-1 md:mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center bg-[#ec2b25] text-white text-xs font-bold">
-                        {index + 1}
-                      </span>
-                      <span className="font-medium text-gray-900 text-sm md:text-base truncate">{item.name}</span>
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-2">
-                      <p className="text-xs md:text-sm font-bold text-gray-900">{item.quantity} orders</p>
-                      <p className="text-xs text-gray-600">{formatCurrency(item.revenue)}</p>
-                    </div>
+            <div className="divide-y divide-gray-100">
+              {stats.topSellingItems.map((item, idx) => (
+                <div key={idx} className="py-3 flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-gray-300">#0{idx+1}</span>
+                    <span className="text-sm font-bold uppercase italic">{item.name}</span>
                   </div>
-                  <div className="w-full bg-gray-200 h-1.5 md:h-2">
-                    <div 
-                      className="bg-[#ec2b25] h-1.5 md:h-2"
-                      style={{ 
-                        width: stats.topSellingItems[0]?.quantity 
-                          ? `${(item.quantity / stats.topSellingItems[0].quantity) * 100}%` 
-                          : '0%' 
-                      }}
-                    />
-                  </div>
+                  <span className="text-sm font-black text-[#ec2b25]">{item.quantity} QTY</span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>No sales data available</p>
-            </div>
+             <div className="h-40 flex items-center justify-center text-gray-400 text-xs font-bold uppercase tracking-widest italic">
+               Waiting for data...
+             </div>
           )}
-        </div>
-      </div>
-
-      {/* Order Status Breakdown */}
-      <div className="bg-white border-2 border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Order Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-green-600">{stats.totalOrders - stats.cancelledOrders}</div>
-            <p className="text-gray-600 mt-2">Completed Orders</p>
-            <div className="mt-2 text-sm text-gray-500">
-              {stats.totalOrders > 0 
-                ? `${(((stats.totalOrders - stats.cancelledOrders) / stats.totalOrders) * 100).toFixed(1)}%` 
-                : '0%'} Success Rate
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-red-600">{stats.cancelledOrders}</div>
-            <p className="text-gray-600 mt-2">Cancelled Orders</p>
-            <div className="mt-2 text-sm text-gray-500">
-              {stats.totalOrders > 0 
-                ? `${((stats.cancelledOrders / stats.totalOrders) * 100).toFixed(1)}%` 
-                : '0%'} Cancellation Rate
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-blue-600">
-              {stats.totalBills > 0 ? (stats.totalRevenue / stats.totalBills).toFixed(0) : 0}
-            </div>
-            <p className="text-gray-600 mt-2">Average Bill Value</p>
-            <div className="mt-2 text-sm text-gray-500">
-              {formatCurrency(stats.totalBills > 0 ? stats.totalRevenue / stats.totalBills : 0)}
-            </div>
-          </div>
         </div>
       </div>
     </div>

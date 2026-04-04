@@ -1,137 +1,164 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { LogIn, Phone, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { RESTAURANT_NAME, MENU_ITEMS } from '../data/menuData';
+import { RESTAURANT_NAME } from '../data/menuData';
+import toast from 'react-hot-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { sendOTP, verifyOTP } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSendOTP = async (e) => {
     e.preventDefault();
+    if (!phoneNumber) {
+      toast.error('Please enter phone number');
+      return;
+    }
+
+    // Format phone number (add +91 if not present)
+    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
     
-    if (!email || !password) {
+    setLoading(true);
+    const sent = await sendOTP(formattedPhone, 'recaptcha-container');
+    if (sent) {
+      setOtpSent(true);
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    if (!otp) {
+      toast.error('Please enter OTP');
       return;
     }
 
     setLoading(true);
     try {
-      const staffData = await login(email, password);
-      
-      // If admin, redirect to dashboard
-      if (staffData?.isAdmin === true) {
-        navigate('/');
-        return;
-      }
-      
-      // For non-admin, redirect to first accessible page in their access array
-      if (staffData?.access && staffData.access.length > 0) {
-        const firstAccessibleItem = MENU_ITEMS.find(item => staffData.access.includes(item.value));
-        if (firstAccessibleItem) {
-          navigate(firstAccessibleItem.path);
-        } else {
-          // If no matching menu item found, show error
-          toast.error('No accessible pages found');
-        }
-      } else {
-        // If access array is empty and not admin, show error
-        toast.error('No access permissions assigned');
-      }
+      await verifyOTP(otp);
+      // Auth listener in context will handle storage and state
+      // Redirect will be handled in App.jsx or here
+      navigate('/onboarding');
     } catch (error) {
-      // Error is handled in AuthContext
+      // Error handled in verifyOTP
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <div id="recaptcha-container"></div>
+        
         {/* Logo/Brand Section */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <div className="inline-block p-4 bg-[#ec2b25] mb-4">
             <LogIn className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{RESTAURANT_NAME}</h1>
-          <p className="text-gray-600">Management System</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{RESTAURANT_NAME} PRO</h1>
+          <p className="text-gray-600">Secure Restaurant Management</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white border-2 border-gray-200 p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
+        <div className="bg-white border-2 border-gray-200 p-8 shadow-sm">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+            {otpSent ? 'Verify OTP' : 'Login'}
+          </h2>
           
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-[#ec2b25] transition-colors"
-                placeholder="Enter your email"
-                required
-                disabled={loading}
-              />
-            </div>
+          {!otpSent ? (
+            <form onSubmit={handleSendOTP} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mobile Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-[#ec2b25] transition-colors"
+                    placeholder="Enter 10-digit mobile number"
+                    required
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500 italic">
+                  We will send a 6-digit OTP to your mobile number.
+                </p>
+              </div>
 
-            {/* Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-[#ec2b25] transition-colors pr-12"
-                  placeholder="Enter your password"
-                  required
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#ec2b25] text-white py-4 font-bold hover:bg-[#d12620] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <span>Send OTP</span>
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOTP} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter 6-digit OTP
+                </label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 focus:outline-none focus:border-[#ec2b25] transition-colors tracking-[0.5em] font-bold text-center text-xl"
+                    placeholder="000000"
+                    required
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
                   disabled={loading}
-                />
+                  className="w-full bg-[#ec2b25] text-white py-4 font-bold hover:bg-[#d12620] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <span>Verify & Login</span>
+                  )}
+                </button>
+                
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
-                  disabled={loading}
+                  onClick={() => setOtpSent(false)}
+                  className="text-sm text-gray-600 hover:text-[#ec2b25] transition-colors font-medium text-center py-2"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  Back to Phone Number
                 </button>
               </div>
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#ec2b25] text-white py-3 font-semibold hover:bg-[#d12620] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Logging in...</span>
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  <span>Login</span>
-                </>
-              )}
-            </button>
-          </form>
+            </form>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-sm text-gray-500">
-          <p>© 2026 {RESTAURANT_NAME}. All rights reserved.</p>
+        <div className="text-center mt-10 text-sm text-gray-500">
+          <p>© 2026 {RESTAURANT_NAME} PRO. All rights reserved.</p>
         </div>
       </div>
     </div>
@@ -139,3 +166,4 @@ const Login = () => {
 };
 
 export default Login;
+

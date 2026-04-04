@@ -5,13 +5,10 @@ import { db } from '../config/firebase';
 import toast from 'react-hot-toast';
 import ThermalBill from '../components/Billing/ThermalBill';
 import { printThermalBill, printKOT, connectBluetoothPrinter, isBluetoothConnected, isMobile, isWebBluetoothAvailable } from '../utils/qzPrint';
-import { usePrinter } from '../context/PrinterContext';
-
-import { ENABLE_AGGREGATORS } from '../config/features';
-
-const ITEMS_PER_PAGE = 24;
+import { useAuth } from '../context/AuthContext';
 
 const BillingPage = () => {
+  const { selectedRestaurant } = useAuth();
   const [showAddBill, setShowAddBill] = useState(true);
   const [floors, setFloors] = useState([]);
   const [tables, setTables] = useState([]);
@@ -90,13 +87,14 @@ const BillingPage = () => {
   // Fetch all data - OPTIMIZED: Combine fetches to reduce Firebase reads
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!selectedRestaurant) return;
       try {
         // Fetch static data in parallel (floors, tables, categories, items)
         const [floorsSnap, tablesSnap, categoriesSnap, itemsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'floors'), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'tables'), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'categories'), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'items'), orderBy('createdAt', 'desc')))
+          getDocs(query(collection(db, 'floors'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc'))),
+          getDocs(query(collection(db, 'tables'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc'))),
+          getDocs(query(collection(db, 'categories'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc'))),
+          getDocs(query(collection(db, 'items'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc')))
         ]);
         
         setFloors(floorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -105,7 +103,12 @@ const BillingPage = () => {
         setItems(itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         
         // Fetch bills with pagination
-        const billsQuery = query(collection(db, 'bills'), orderBy('createdAt', 'desc'), limit(ITEMS_PER_PAGE));
+        const billsQuery = query(
+          collection(db, 'bills'), 
+          where('restaurantId', '==', selectedRestaurant.id),
+          orderBy('createdAt', 'desc'), 
+          limit(ITEMS_PER_PAGE)
+        );
         const billsSnap = await getDocs(billsQuery);
         const billsData = billsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setBills(billsData);
@@ -127,6 +130,7 @@ const BillingPage = () => {
 
   // Fetch bill statistics for today - OPTIMIZED: Uses bills already fetched
   const fetchBillStats = async (billsData = null) => {
+    if (!selectedRestaurant) return;
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -135,7 +139,11 @@ const BillingPage = () => {
       let allBills = billsData;
       if (!allBills) {
         // Only fetch if not provided - this reduces reads
-        const querySnapshot = await getDocs(collection(db, 'bills'));
+        const q = query(
+          collection(db, 'bills'),
+          where('restaurantId', '==', selectedRestaurant.id)
+        );
+        const querySnapshot = await getDocs(q);
         allBills = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       }
       
@@ -731,6 +739,7 @@ const BillingPage = () => {
       const total = subtotal - discount; // Use new discount value for saving
       
       const billData = {
+        restaurantId: selectedRestaurant.id, // Multi-tenant
         customerName: customerName || 'Guest',
         items: updatedItemsWithOrders,
         subtotal: subtotal,

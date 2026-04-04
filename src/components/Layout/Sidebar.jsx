@@ -13,11 +13,11 @@ import {
   ReceiptText,
   X
 } from 'lucide-react';
-import { MENU_ITEMS, RESTAURANT_NAME } from '../../data/menuData';
+import { MENU_ITEMS } from '../../data/menuData';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const { hasAccess } = useAuth();
+  const { hasAccess, selectedRestaurant } = useAuth();
   
   // Map icon names to icon components
   const iconMap = {
@@ -41,7 +41,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-[rgba(0,0,0,0.5)] bg-opacity-50 z-40"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={onClose}
         />
       )}
@@ -54,18 +54,18 @@ const Sidebar = ({ isOpen, onClose }) => {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Logo */}
-        <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#ec2b25]">{RESTAURANT_NAME}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">Management System</p>
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#ec2b25] whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
+              {selectedRestaurant?.name || 'LEKA'}
+            </h1>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 transition-colors cursor-pointer">
+              <X className="w-5 h-5 text-gray-700" />
+            </button>
           </div>
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5 text-gray-700" />
-          </button>
+          <p className="text-[10px] sm:text-xs font-black uppercase text-gray-400 tracking-widest mt-1">
+            {selectedRestaurant?.role || 'User'} Dashboard
+          </p>
         </div>
 
         {/* Navigation */}
@@ -77,10 +77,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 key={item.path}
                 to={item.path}
                 end={item.path === '/'}
-                onClick={() => {
-                  // Close sidebar when clicking a link
-                  onClose();
-                }}
+                onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 transition-colors cursor-pointer ${
                     isActive
@@ -98,7 +95,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="p-3 sm:p-4 border-t border-gray-200">
-          <p className="text-xs text-gray-400 text-center">v1.0.0</p>
+          <p className="text-xs text-gray-400 text-center">LEKA PRO v1.0.0</p>
         </div>
       </div>
     </>

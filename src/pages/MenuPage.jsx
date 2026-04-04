@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, SquarePen, Trash2, Loader2, Printer } from 'lucide-react';
-import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import AddCategoryModal from '../components/AddCategoryModal';
 import AddItemModal from '../components/AddItemModal';
 import { printMenuItems } from '../utils/qzPrint';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const MenuPage = () => {
+  const { selectedRestaurant } = useAuth();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -20,8 +22,13 @@ const MenuPage = () => {
 
   // Fetch categories from Firestore
   const fetchCategories = async () => {
+    if (!selectedRestaurant) return;
     try {
-      const q = query(collection(db, 'categories'), orderBy('createdAt', 'desc'));
+      const q = query(
+        collection(db, 'categories'), 
+        where('restaurantId', '==', selectedRestaurant.id),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const categoriesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -36,8 +43,13 @@ const MenuPage = () => {
 
   // Fetch items from Firestore
   const fetchItems = async () => {
+    if (!selectedRestaurant) return;
     try {
-      const q = query(collection(db, 'items'), orderBy('createdAt', 'desc'));
+      const q = query(
+        collection(db, 'items'), 
+        where('restaurantId', '==', selectedRestaurant.id),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const itemsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -53,9 +65,11 @@ const MenuPage = () => {
   };
 
   useEffect(() => {
-    fetchCategories();
-    fetchItems();
-  }, []);
+    if (selectedRestaurant) {
+      fetchCategories();
+      fetchItems();
+    }
+  }, [selectedRestaurant]);
 
   // Save category to Firestore
   const handleSaveCategory = async (categoryIdOrData, categoryData) => {
@@ -66,7 +80,11 @@ const MenuPage = () => {
         toast.success('Category updated successfully!');
       } else {
         // Add mode: categoryIdOrData is the data
-        await addDoc(collection(db, 'categories'), categoryIdOrData);
+        await addDoc(collection(db, 'categories'), { 
+          ...categoryIdOrData, 
+          restaurantId: selectedRestaurant.id,
+          createdAt: new Date().toISOString()
+        });
         toast.success('Category added successfully!');
       }
       fetchCategories();
@@ -114,7 +132,11 @@ const MenuPage = () => {
         toast.success('Item updated successfully!');
       } else {
         // Add mode: itemIdOrData is the data
-        await addDoc(collection(db, 'items'), itemIdOrData);
+        await addDoc(collection(db, 'items'), { 
+          ...itemIdOrData, 
+          restaurantId: selectedRestaurant.id,
+          createdAt: new Date().toISOString()
+        });
         toast.success('Item added successfully!');
       }
       fetchItems();
@@ -376,7 +398,9 @@ const MenuPage = () => {
                   </div>
                   
                   {/* Image */}
-                  <div className="w-full aspect-square bg-gray-50 flex items-center justify-center text-5xl md:text-6xl mb-3"><img src={item.image} alt="" /></div>
+                  <div className="w-full aspect-square bg-gray-50 flex items-center justify-center text-5xl md:text-6xl mb-3">
+                    {item.image ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" /> : '🍽️'}
+                  </div>
                   
                   {/* Veg/Non-veg Symbol + Name */}
                   <div className="flex items-start gap-1.5 mb-2">
@@ -429,7 +453,7 @@ const MenuPage = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm.show && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/50">
           <div className="bg-white w-full max-w-md p-4 md:p-6">
             <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Confirm Delete</h2>
             <p className="text-sm md:text-base text-gray-700 mb-4 md:mb-6">
