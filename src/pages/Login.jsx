@@ -10,8 +10,14 @@ const Login = () => {
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { sendOTP, verifyOTP } = useAuth();
+  const { sendOTP, verifyOTP, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/onboarding');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -24,7 +30,7 @@ const Login = () => {
     const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
     
     setLoading(true);
-    const sent = await sendOTP(formattedPhone, 'recaptcha-container');
+    const sent = await sendOTP(formattedPhone);
     if (sent) {
       setOtpSent(true);
     }
@@ -38,11 +44,12 @@ const Login = () => {
       return;
     }
 
+    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
+
     setLoading(true);
     try {
-      await verifyOTP(otp);
+      await verifyOTP(formattedPhone, otp);
       // Auth listener in context will handle storage and state
-      // Redirect will be handled in App.jsx or here
       navigate('/onboarding');
     } catch (error) {
       // Error handled in verifyOTP
@@ -54,7 +61,6 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div id="recaptcha-container"></div>
         
         {/* Logo/Brand Section */}
         <div className="text-center mb-10">
@@ -166,4 +172,3 @@ const Login = () => {
 };
 
 export default Login;
-

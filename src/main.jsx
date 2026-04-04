@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+import { AuthProvider } from '@descope/react-sdk';
+
+const DESCOPE_PROJECT_ID = import.meta.env.VITE_DESCOPE_PROJECT_ID;
+
 // Disable inspect mode if VITE_DISABLE_DEVTOOLS is true
 if (import.meta.env.VITE_DISABLE_DEVTOOLS === 'true') {
   // Disable right-click context menu
@@ -40,6 +44,8 @@ if (import.meta.env.VITE_DISABLE_DEVTOOLS === 'true') {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <AuthProvider projectId={DESCOPE_PROJECT_ID}>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )
