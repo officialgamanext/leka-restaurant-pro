@@ -3,6 +3,7 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { 
   Calendar, 
+  TrendingUp,
   DollarSign, 
   ShoppingBag, 
   ChevronDown, 

@@ -1,18 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { collection, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Building2, Plus, LogOut, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, Plus, LogOut, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Onboarding = () => {
-  const { user, userRestaurants, selectRestaurant, logout, fetchUserRestaurants } = useAuth();
-  const [showAddBusiness, setShowAddBusiness] = useState(userRestaurants.length === 0);
+  const { user, userRestaurants, setSelectedRestaurant, logout, refreshUser, loading: authLoading } = useAuth();
+  const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // When restaurants finish loading, decide what to show
+  useEffect(() => {
+    if (!authLoading) {
+      if (userRestaurants.length === 0) {
+        setShowAddBusiness(true);
+      } else {
+        setShowAddBusiness(false);
+      }
+    }
+  }, [authLoading, userRestaurants]);
+
+  // Map Descope user fields to what the app expects
+  const userId = user?.userId;
+  const userPhone = user?.phone || '';
 
   const handleAddBusiness = async (e) => {
     e.preventDefault();
@@ -27,15 +42,15 @@ const Onboarding = () => {
       const restaurantData = {
         name: businessName,
         address: address,
-        ownerId: user.uid,
-        ownerPhone: user.phoneNumber,
+        ownerId: userId,
+        ownerPhone: userPhone,
         subscriptionStatus: 'inactive',
         startDate: null,
         endDate: null,
-        staffPhoneNumbers: [user.phoneNumber],
+        staffPhoneNumbers: [userPhone],
         staffMembers: [
           {
-            phoneNumber: user.phoneNumber,
+            phoneNumber: userPhone,
             role: 'owner',
             name: 'Owner',
             permissions: []
@@ -47,14 +62,14 @@ const Onboarding = () => {
       const docRef = await addDoc(collection(db, 'restaurants'), restaurantData);
       
       // 2. Update User Document
-      await updateDoc(doc(db, 'users', user.uid), {
+      await updateDoc(doc(db, 'users', userId), {
         restaurantIds: arrayUnion(docRef.id)
       });
 
       toast.success('Business added successfully!');
       
       // Refresh user restaurants
-      await fetchUserRestaurants(user);
+      await refreshUser();
       setShowAddBusiness(false);
       setBusinessName('');
       setAddress('');
@@ -68,19 +83,27 @@ const Onboarding = () => {
   };
 
   const handleSelectRestaurant = (res) => {
-    const isSubscriptionActive = () => {
-      if (res.subscriptionStatus !== 'active') return false;
-      if (!res.endDate) return false;
-      return new Date() < new Date(res.endDate);
-    };
+    const isActive = res.subscriptionStatus === 'active' && res.endDate && new Date() < new Date(res.endDate);
 
-    if (isSubscriptionActive()) {
-      selectRestaurant(res);
+    if (isActive) {
+      setSelectedRestaurant(res);
       navigate('/');
     } else {
       toast.error('Subscription inactive or expired. Please contact support.');
     }
   };
+
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#ec2b25] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading your businesses...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 md:p-6">
@@ -88,7 +111,7 @@ const Onboarding = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Welcome</h1>
-            <p className="text-gray-600">{user?.phoneNumber}</p>
+            <p className="text-gray-600">{userPhone}</p>
           </div>
           <button
             onClick={logout}

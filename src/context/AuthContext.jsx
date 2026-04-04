@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useSession, useUser, useDescope } from '@descope/react-sdk';
+import { useDescope } from '@descope/react-sdk';
 import { 
   doc, 
   getDoc, 
@@ -23,33 +23,45 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const { isSessionLoading, sessionToken, authenticated } = useSession();
-  const { user: descopeUser, isUserLoading } = useUser();
   const sdk = useDescope();
+  const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [userRestaurants, setUserRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // On mount, check if there's an existing Descope session
   useEffect(() => {
-    if (!isSessionLoading && !isUserLoading) {
-      if (authenticated && descopeUser) {
-        fetchUserRestaurants(descopeUser);
-      } else {
-        setUserData(null);
-        setUserRestaurants([]);
-        setSelectedRestaurant(null);
-        setLoading(false);
+    const checkSession = async () => {
+      try {
+        // Try to get session token
+        const sessionToken = sdk.getSessionToken?.();
+        const isExpired = sessionToken ? sdk.isSessionTokenExpired?.(sessionToken) : true;
+        
+        if (sessionToken && !isExpired) {
+          // Session exists — fetch user info from Descope
+          const meResponse = await sdk.me();
+          if (meResponse.ok && meResponse.data) {
+            setUser(meResponse.data);
+            setIsAuthenticated(true);
+            await fetchUserRestaurants(meResponse.data);
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('No existing Descope session:', e.message || e);
       }
-    }
-  }, [authenticated, descopeUser, isSessionLoading, isUserLoading]);
+      setLoading(false);
+    };
+    checkSession();
+  }, []);
 
-  // NEW: Descope Custom OTP Logic to replace Firebase
   const sendOTP = async (phoneNumber) => {
     try {
       const response = await sdk.otp.signUpOrIn.sms(phoneNumber);
       if (response.ok) {
-        toast.success('Descope OTP sent successfully!');
+        toast.success('OTP sent successfully!');
         return true;
       } else {
         console.error("Descope Error:", response.error);
@@ -58,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('OTP Send Error:', error);
-      toast.error('Connection error with Descope Identity.');
+      toast.error('Connection error. Please try again.');
       return false;
     }
   };
@@ -67,25 +79,31 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await sdk.otp.verify.sms(phoneNumber, code);
       if (response.ok) {
-        toast.success('Login authorized!');
-        // Note: useSession and useUser hooks will automatically update
-        // once the SDK manages the new session cookies/tokens.
-        return true;
+        // Extract user from verify response
+        const verifiedUser = response.data?.user;
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          setIsAuthenticated(true);
+          toast.success('Login successful!');
+          // Fetch restaurants in background
+          fetchUserRestaurants(verifiedUser);
+          return true;
+        }
       } else {
-        toast.error('Verification failed: ' + response.error.errorMessage);
-        throw response.error;
+        toast.error('Verification failed: ' + response.error?.errorMessage);
+        return false;
       }
     } catch (error) {
-       console.error('OTP Verify Error:', error);
-       toast.error('Invalid code. Please try again.');
-       throw error;
+      console.error('OTP Verify Error:', error);
+      toast.error('Invalid OTP. Please try again.');
+      return false;
     }
   };
 
   const fetchUserRestaurants = async (dUser) => {
     if (!dUser) return;
     const uid = dUser.userId;
-    const phoneNumber = dUser.phone;
+    const phoneNumber = dUser.phone || dUser.verifiedPhone || '';
     
     try {
       setLoading(true);
@@ -95,7 +113,7 @@ export const AuthProvider = ({ children }) => {
       if (!userSnap.exists()) {
         const newUser = {
           uid,
-          phoneNumber: phoneNumber || '',
+          phoneNumber: phoneNumber,
           email: dUser.email || '',
           name: dUser.name || '',
           createdAt: new Date().toISOString(),
@@ -109,17 +127,17 @@ export const AuthProvider = ({ children }) => {
 
       const ownerQuery = query(collection(db, 'restaurants'), where('ownerId', '==', uid));
       const ownerSnap = await getDocs(ownerQuery);
-      const owned = ownerSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), role: 'owner' }));
+      const owned = ownerSnap.docs.map(d => ({ id: d.id, ...d.data(), role: 'owner' }));
 
       let staffOf = [];
       if (phoneNumber) {
         const staffQuery = query(collection(db, 'restaurants'), where('staffPhoneNumbers', 'array-contains', phoneNumber));
         const staffSnap = await getDocs(staffQuery);
-        staffOf = staffSnap.docs.map(doc => {
-          const data = doc.data();
+        staffOf = staffSnap.docs.map(d => {
+          const data = d.data();
           const staffMember = data.staffMembers?.find(s => s.phoneNumber === phoneNumber);
           return { 
-            id: doc.id, 
+            id: d.id, 
             ...data, 
             role: 'staff',
             permissions: staffMember?.permissions || [] 
@@ -136,20 +154,26 @@ export const AuthProvider = ({ children }) => {
       
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching data from Firestore:', error);
+      console.error('Firestore fetch error:', error);
       setLoading(false);
     }
   };
 
   const logout = async () => {
-    await sdk.logout();
+    try {
+      await sdk.logout();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    setUser(null);
+    setIsAuthenticated(false);
     setSelectedRestaurant(null);
     setUserRestaurants([]);
     setUserData(null);
   };
 
   const getActiveSubscription = (restaurant) => {
-    if (!restaurant) return null;
+    if (!restaurant) return { isActive: false, status: 'inactive', endDate: null };
     const now = new Date();
     const endDate = restaurant.endDate ? new Date(restaurant.endDate) : null;
     const isActive = restaurant.subscriptionStatus === 'active' && (!endDate || endDate > now);
@@ -157,26 +181,26 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    user: descopeUser,
+    user,
     userData,
     userRestaurants,
     selectedRestaurant,
     setSelectedRestaurant,
-    loading: loading || isSessionLoading || isUserLoading,
+    loading,
     logout,
     sendOTP,
     verifyOTP,
     getActiveSubscription,
-    refreshUser: () => fetchUserRestaurants(descopeUser),
-    isAuthenticated: !!authenticated,
+    refreshUser: () => user && fetchUserRestaurants(user),
+    isAuthenticated,
     hasAccess: (menuValue) => {
       if (!selectedRestaurant) return false;
       if (selectedRestaurant.role === 'owner') return true;
       return selectedRestaurant.permissions?.includes(menuValue);
     },
     isSubscriptionActive: () => {
-      const { isActive } = getActiveSubscription(selectedRestaurant);
-      return isActive;
+      const sub = getActiveSubscription(selectedRestaurant);
+      return sub.isActive;
     }
   };
 

@@ -48,12 +48,13 @@ const Login = () => {
 
     setLoading(true);
     try {
-      await verifyOTP(formattedPhone, otp);
-      // Auth listener in context will handle storage and state
-      navigate('/onboarding');
+      const success = await verifyOTP(formattedPhone, otp);
+      if (success) {
+        navigate('/onboarding');
+      } else {
+        setLoading(false);
+      }
     } catch (error) {
-      // Error handled in verifyOTP
-    } finally {
       setLoading(false);
     }
   };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, query, where, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Plus, X, DollarSign, Users, IndianRupee, Calendar, SquarePen, Trash2 } from 'lucide-react';
+import { Plus, X, DollarSign, Users, IndianRupee, Calendar, SquarePen, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 

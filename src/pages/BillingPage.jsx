@@ -6,6 +6,9 @@ import toast from 'react-hot-toast';
 import ThermalBill from '../components/Billing/ThermalBill';
 import { printThermalBill, printKOT, connectBluetoothPrinter, isBluetoothConnected, isMobile, isWebBluetoothAvailable } from '../utils/qzPrint';
 import { useAuth } from '../context/AuthContext';
+import { usePrinter } from '../context/PrinterContext';
+
+const ITEMS_PER_PAGE = 20;
 
 const BillingPage = () => {
   const { selectedRestaurant } = useAuth();

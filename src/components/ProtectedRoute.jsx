@@ -6,6 +6,25 @@ const ProtectedRoute = ({ children, menuValue }) => {
   const { isAuthenticated, loading, hasAccess, selectedRestaurant, isSubscriptionActive } = useAuth();
   const location = useLocation();
 
+  // Allow /onboarding access as soon as user is authenticated (don't wait for full load)
+  if (location.pathname === '/onboarding') {
+    if (isAuthenticated) {
+      return children;
+    }
+    // Still loading session — show spinner
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-screen bg-gray-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-[#ec2b25] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+    return <Navigate to="/login" replace />;
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -20,11 +39,6 @@ const ProtectedRoute = ({ children, menuValue }) => {
   // 1. Not logged in -> Redirect to /login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
-  }
-
-  // Allow /onboarding access without restaurant/subscription
-  if (location.pathname === '/onboarding') {
-    return children;
   }
 
   // 2. Logged in but no restaurant selected OR subscription inactive -> Redirect to /onboarding

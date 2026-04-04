@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-import { AuthProvider } from '@descope/react-sdk';
+import { AuthProvider as DescopeAuthProvider } from '@descope/react-sdk';
 
 const DESCOPE_PROJECT_ID = import.meta.env.VITE_DESCOPE_PROJECT_ID;
 
@@ -44,8 +44,8 @@ if (import.meta.env.VITE_DISABLE_DEVTOOLS === 'true') {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider projectId={DESCOPE_PROJECT_ID}>
+    <DescopeAuthProvider projectId={DESCOPE_PROJECT_ID}>
       <App />
-    </AuthProvider>
+    </DescopeAuthProvider>
   </StrictMode>,
 )
