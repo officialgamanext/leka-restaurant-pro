@@ -51,15 +51,14 @@ const AllBills = () => {
       // Base query with restaurantId filter
       const q = query(
         collection(db, 'bills'), 
-        where('restaurantId', '==', selectedRestaurant.id),
-        orderBy('createdAt', 'desc')
+        where('restaurantId', '==', selectedRestaurant.id)
       );
 
       const querySnapshot = await getDocs(q);
       let billsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       // Apply Local Date Filtering
       if (dateFilter !== 'all') {

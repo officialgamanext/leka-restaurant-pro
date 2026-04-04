@@ -20,14 +20,13 @@ const TablesPage = () => {
     try {
       const q = query(
         collection(db, 'tables'), 
-        where('restaurantId', '==', selectedRestaurant.id),
-        orderBy('createdAt', 'desc')
+        where('restaurantId', '==', selectedRestaurant.id)
       );
       const querySnapshot = await getDocs(q);
       const tablesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setTables(tablesData);
     } catch (error) {
       console.error('Error fetching tables:', error);

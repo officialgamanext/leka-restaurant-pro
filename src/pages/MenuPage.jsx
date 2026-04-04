@@ -26,14 +26,13 @@ const MenuPage = () => {
     try {
       const q = query(
         collection(db, 'categories'), 
-        where('restaurantId', '==', selectedRestaurant.id),
-        orderBy('createdAt', 'desc')
+        where('restaurantId', '==', selectedRestaurant.id)
       );
       const querySnapshot = await getDocs(q);
       const categoriesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setCategories(categoriesData);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -47,14 +46,13 @@ const MenuPage = () => {
     try {
       const q = query(
         collection(db, 'items'), 
-        where('restaurantId', '==', selectedRestaurant.id),
-        orderBy('createdAt', 'desc')
+        where('restaurantId', '==', selectedRestaurant.id)
       );
       const querySnapshot = await getDocs(q);
       const itemsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setItems(itemsData);
     } catch (error) {
       console.error('Error fetching items:', error);

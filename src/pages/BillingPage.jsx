@@ -95,16 +95,18 @@ const BillingPage = () => {
       try {
         // Fetch static data in parallel (floors, tables, categories, items)
         const [floorsSnap, tablesSnap, categoriesSnap, itemsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'floors'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'tables'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'categories'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'items'), where('restaurantId', '==', selectedRestaurant.id), orderBy('createdAt', 'desc')))
+          getDocs(query(collection(db, 'floors'), where('restaurantId', '==', selectedRestaurant.id))),
+          getDocs(query(collection(db, 'tables'), where('restaurantId', '==', selectedRestaurant.id))),
+          getDocs(query(collection(db, 'categories'), where('restaurantId', '==', selectedRestaurant.id))),
+          getDocs(query(collection(db, 'items'), where('restaurantId', '==', selectedRestaurant.id)))
         ]);
         
-        setFloors(floorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setTables(tablesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setCategories(categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setItems(itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const sortData = (data) => data.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+        setFloors(sortData(floorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+        setTables(sortData(tablesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+        setCategories(sortData(categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+        setItems(sortData(itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
         
         // Fetch bills with pagination
         const billsQuery = query(
