@@ -173,34 +173,34 @@ const AllBills = () => {
 
   return (
     <div className="space-y-6 pb-20 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#ec2b25] p-2 text-white">
-            <ReceiptText size={20} />
+        <div className="flex items-center gap-4">
+          <div className="bg-[#ec2b25] p-3 text-white shadow-lg">
+            <ReceiptText size={24} strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">All Bills</h1>
-            <p className="text-xs text-gray-400 font-medium tracking-wider uppercase">History of transactions</p>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">All Bills</h1>
+            <p className="text-[10px] text-gray-400 font-black tracking-[0.2em] uppercase">History of transactions</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 md:flex-none md:min-w-[300px]">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <div className="relative flex-1 md:flex-none md:min-w-[350px]">
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
              <input 
                type="text" 
                placeholder="Search Bill ID, Table or Customer..."
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
-               className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 text-sm focus:ring-1 focus:ring-[#ec2b25] focus:outline-none"
+               className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-100 text-sm font-medium focus:ring-0 focus:border-[#ec2b25] focus:outline-none transition-all"
              />
           </div>
         </div>
       </div>
 
-      {/* Filter Section */}
-      <div className="bg-white border border-gray-200 p-2 overflow-x-auto scrollbar-hide no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 flex items-center gap-2">
+      {/* Filter Tabs */}
+      <div className="bg-white border-2 border-gray-100 p-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
          {[
            { id: 'today', label: 'Today' },
            { id: 'yesterday', label: 'Yesterday' },
@@ -220,10 +220,10 @@ const AllBills = () => {
                 if (f.id !== 'custom') setShowCustomPicker(false);
                 else setShowCustomPicker(!showCustomPicker);
              }}
-             className={`px-4 py-2 text-xs font-bold whitespace-nowrap border transition-all cursor-pointer ${
+             className={`px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                dateFilter === f.id 
-               ? 'bg-[#ec2b25] text-white border-[#ec2b25]' 
-               : 'bg-white text-gray-500 border-gray-100 hover:border-gray-300'
+               ? 'bg-[#ec2b25] text-white' 
+               : 'bg-transparent text-gray-500 hover:bg-gray-50'
              }`}
            >
              {f.label}
@@ -231,51 +231,51 @@ const AllBills = () => {
          ))}
       </div>
 
-      {/* Custom Picker */}
+      {/* Custom Date Picker */}
       {showCustomPicker && (
-         <div className="bg-white border border-gray-200 p-4 flex flex-col sm:flex-row items-end gap-4 max-w-lg mb-4">
-            <div className="flex-1 space-y-1">
-               <label className="text-[10px] font-bold text-gray-400 uppercase">Start Date</label>
+         <div className="bg-white border-2 border-gray-100 p-6 flex flex-col sm:flex-row items-end gap-4 max-w-2xl animate-in fade-in slide-in-from-top-2">
+            <div className="flex-1 space-y-2 w-full">
+               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Start Date</label>
                <input 
                  type="date" 
                  value={customStartDate}
                  onChange={(e) => setCustomStartDate(e.target.value)}
-                 className="w-full p-2 bg-gray-50 border border-gray-100 text-sm focus:outline-none focus:border-[#ec2b25]"
+                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-[#ec2b25] focus:bg-white text-sm font-bold focus:outline-none transition-all"
                />
             </div>
-            <div className="flex-1 space-y-1">
-               <label className="text-[10px] font-bold text-gray-400 uppercase">End Date</label>
+            <div className="flex-1 space-y-2 w-full">
+               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">End Date</label>
                <input 
                  type="date" 
                  value={customEndDate}
                  onChange={(e) => setCustomEndDate(e.target.value)}
-                 className="w-full p-2 bg-gray-50 border border-gray-100 text-sm focus:outline-none focus:border-[#ec2b25]"
+                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-[#ec2b25] focus:bg-white text-sm font-bold focus:outline-none transition-all"
                />
             </div>
             <button 
               onClick={() => fetchBills()}
-              className="px-6 py-2 bg-[#ec2b25] text-white font-bold text-sm tracking-tight cursor-pointer hover:bg-[#d12620] transition-colors"
+              className="px-8 py-3 bg-[#111827] text-white font-black text-xs uppercase tracking-widest cursor-pointer hover:bg-black transition-colors min-w-[150px]"
             >
-              Apply Filter
+              Filter
             </button>
          </div>
       )}
 
       {/* Bills Table */}
-      <div className="bg-white border border-gray-200 shadow-sm overflow-hidden mb-6">
+      <div className="bg-white border-2 border-gray-100 overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-20 flex flex-col items-center justify-center gap-4">
-             <Loader2 size={40} className="text-[#ec2b25] animate-spin" />
-             <p className="text-gray-400 font-bold tracking-widest text-xs uppercase">Loading Archive...</p>
+             <Loader2 size={48} className="text-[#ec2b25] animate-spin" />
+             <p className="text-gray-400 font-black tracking-[0.3em] text-[10px] uppercase">Retrieving Data</p>
           </div>
         ) : filteredBillsList.length === 0 ? (
-          <div className="p-20 text-center space-y-4">
-             <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-gray-300">
-                <History size={32} />
+          <div className="p-24 text-center space-y-4">
+             <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-gray-200">
+                <History size={40} />
              </div>
              <div className="max-w-xs mx-auto">
-               <h3 className="text-gray-900 font-bold">No bills found</h3>
-               <p className="text-gray-400 text-xs mt-1 leading-tight">We couldn't find any transactions for the selected criteria.</p>
+               <h3 className="text-gray-900 font-black uppercase text-sm tracking-tight">Archives Empty</h3>
+               <p className="text-gray-400 text-[11px] mt-2 font-medium">No transactions match your search or filter settings.</p>
              </div>
           </div>
         ) : (
@@ -283,60 +283,65 @@ const AllBills = () => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-[#111827]">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 italic">Bill ID</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800">Time</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800">Customer / Table</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 text-center">Qty</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 text-right">Total</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-800 text-center">Action</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800">Bill ID</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800">Status</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800">Time</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800">Customer / Table</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800 text-center">Qty</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800">Total</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredBillsList.map((bill) => (
-                  <tr key={bill.id} className="hover:bg-gray-50 transition-colors group italic">
-                    <td className="px-6 py-4 font-black text-[#ec2b25] text-sm tracking-tighter">
-                      {bill.billId || '---'}
+                  <tr key={bill.id} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-6 py-5">
+                      <span className="font-black text-[#ec2b25] text-sm tracking-tighter italic">
+                        {bill.billId || '---'}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-[10px] font-black uppercase ${
-                        bill.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    <td className="px-6 py-5">
+                      <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-wider ${
+                        bill.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                       }`}>
                         {bill.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-xs font-bold text-gray-900">
+                    <td className="px-6 py-5">
+                      <div className="text-[11px] font-black text-gray-900 uppercase">
                         {bill.createdAt ? new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '---'}
                       </div>
-                      <div className="text-[10px] text-gray-400 font-medium">
+                      <div className="text-[10px] text-gray-400 font-bold italic lowercase">
                         {bill.createdAt ? new Date(bill.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '---'}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-xs font-bold text-gray-900 flex items-center gap-1.5 leading-none">
-                         <LayoutGrid size={12} className="text-gray-300" />
+                    <td className="px-6 py-5">
+                      <div className="text-[11px] font-black text-gray-900 flex items-center gap-2">
+                         <div className="w-1.5 h-1.5 bg-gray-200"></div>
                          {bill.tableName || 'N/A'}
                       </div>
-                      <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold">{bill.customerName || 'Walk-in Customer'}</p>
+                      <p className="text-[10px] text-gray-400 uppercase font-black mt-1 tracking-tight">{bill.customerName || 'Guest'}</p>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xs font-black bg-gray-50 px-2 py-1 text-gray-600">
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-[11px] font-black text-gray-900 bg-gray-50 px-2 py-1">
                         {bill.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="text-sm font-black text-gray-900">₹{Math.round(bill.total || 0).toLocaleString()}</p>
-                      <p className="text-[9px] text-gray-400 uppercase font-black tracking-tight">{bill.paymentMethod || 'Pending'}</p>
+                    <td className="px-6 py-5">
+                      <p className="text-base font-black text-gray-900 tracking-tighter">
+                        <span className="text-xs mr-0.5 font-bold italic">₹</span>
+                        {Math.round(bill.total || 0).toLocaleString()}
+                      </p>
+                      <p className="text-[9px] text-gray-400 uppercase font-black tracking-[0.1em]">{bill.paymentMethod || 'Cash'}</p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       <div className="flex items-center justify-center gap-2">
                          <button 
                            onClick={() => handlePrint(bill)}
-                           className="p-2 text-gray-400 hover:text-[#ec2b25] hover:bg-red-50 transition-all cursor-pointer"
+                           className="p-2.5 text-gray-300 hover:text-[#ec2b25] hover:bg-[#ec2b25]/5 border border-transparent hover:border-[#ec2b25]/10 transition-all cursor-pointer"
                            title="Reprint Bill"
                          >
-                            <Printer size={16} />
+                            <Printer size={18} />
                          </button>
                       </div>
                     </td>
@@ -348,18 +353,25 @@ const AllBills = () => {
         )}
       </div>
 
-      {/* Bill Meta */}
+      {/* Aggregate Revenue Footer */}
       {!loading && filteredBillsList.length > 0 && (
-         <div className="bg-[#111827] p-4 sm:p-6 flex flex-col md:flex-row items-center justify-between text-white border-t border-[#ec2b25]">
-            <div className="flex items-center gap-6">
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Sales Count</p>
-                  <p className="text-xl font-black">{filteredBillsList.length} <span className="text-xs font-medium text-gray-500 tracking-normal italic">Authorized Bills</span></p>
-               </div>
+         <div className="bg-[#111827] px-8 py-10 flex flex-col md:flex-row items-center justify-between text-white border-t-4 border-[#ec2b25] mt-10">
+            <div className="flex flex-col items-center md:items-start gap-1">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Total Sales Count</p>
+                <div className="flex items-baseline gap-2">
+                   <p className="text-3xl font-black">{filteredBillsList.length}</p>
+                   <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">Authorized Bills</p>
+                </div>
             </div>
-            <div className="space-y-0.5 text-right mt-4 md:mt-0">
-               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Aggregate Revenue</p>
-               <p className="text-2xl font-black text-[#ec2b25]">₹{Math.round(filteredBillsList.reduce((sum, b) => sum + (b.total || 0), 0)).toLocaleString()}</p>
+            
+            <div className="flex flex-col items-center md:items-end gap-1 mt-8 md:mt-0">
+               <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Aggregate Revenue</p>
+               <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-black text-[#ec2b25] italic">₹</span>
+                  <p className="text-5xl font-black text-[#ec2b25] tracking-tighter">
+                    {Math.round(filteredBillsList.reduce((sum, b) => sum + (b.total || 0), 0)).toLocaleString()}
+                  </p>
+               </div>
             </div>
          </div>
       )}

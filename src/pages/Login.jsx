@@ -28,7 +28,7 @@ const Login = () => {
 
     // Format phone number (add +91 if not present)
     const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-    
+
     setLoading(true);
     const sent = await sendOTP(formattedPhone);
     if (sent) {
@@ -62,13 +62,13 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        
+
         {/* Logo/Brand Section */}
         <div className="text-center mb-10">
           <div className="inline-block p-4 bg-[#ec2b25] mb-4">
             <LogIn className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{RESTAURANT_NAME} PRO</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{RESTAURANT_NAME}</h1>
           <p className="text-gray-600">Secure Restaurant Management</p>
         </div>
 
@@ -77,7 +77,7 @@ const Login = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
             {otpSent ? 'Verify OTP' : 'Login'}
           </h2>
-          
+
           {!otpSent ? (
             <form onSubmit={handleSendOTP} className="space-y-6">
               <div>
@@ -150,7 +150,7 @@ const Login = () => {
                     <span>Verify & Login</span>
                   )}
                 </button>
-                
+
                 <button
                   type="button"
                   onClick={() => setOtpSent(false)}
