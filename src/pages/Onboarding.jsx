@@ -47,15 +47,8 @@ const Onboarding = () => {
         subscriptionStatus: 'inactive',
         startDate: null,
         endDate: null,
-        staffPhoneNumbers: [userPhone],
-        staffMembers: [
-          {
-            phoneNumber: userPhone,
-            role: 'owner',
-            name: 'Owner',
-            permissions: []
-          }
-        ],
+        staffPhoneNumbers: [],
+        staffMembers: [],
         createdAt: new Date().toISOString()
       };
 
