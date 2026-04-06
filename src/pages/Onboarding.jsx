@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { collection, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Building2, Plus, LogOut, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Building2, Plus, LogOut, CheckCircle2, AlertCircle, Loader2, Mail, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Onboarding = () => {
@@ -241,6 +241,34 @@ const Onboarding = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Support Section */}
+      <div className="w-full max-w-2xl mt-12 py-8 border-t-2 border-gray-200 flex flex-col md:flex-row items-center justify-between gap-6 text-gray-500">
+        <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-8">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-[#ec2b25]/5 rounded-lg">
+              <Phone className="w-4 h-4 text-[#ec2b25]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-black tracking-wider opacity-50 leading-tight">Helpline</span>
+              <span className="text-sm font-bold text-gray-900">+91 91544 51336</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-[#ec2b25]/5 rounded-lg">
+              <Mail className="w-4 h-4 text-[#ec2b25]" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-black tracking-wider opacity-50 leading-tight">Support Email</span>
+              <span className="text-sm font-bold text-gray-900 leading-tight">officialgamanext@gmail.com</span>
+            </div>
+          </div>
+        </div>
+        <div className="text-center md:text-right">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#ec2b25]">Premium Support</p>
+          <p className="text-xs font-bold text-gray-400">Available 24/7 for you</p>
+        </div>
       </div>
     </div>
   );

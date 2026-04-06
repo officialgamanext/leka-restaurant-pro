@@ -145,7 +145,16 @@ export const AuthProvider = ({ children }) => {
         });
       }
 
-      const all = [...owned, ...staffOf];
+      // Combine and filter duplicates, prioritizing owner role
+      const restaurantsMap = new Map();
+      owned.forEach(res => restaurantsMap.set(res.id, res));
+      staffOf.forEach(res => {
+        if (!restaurantsMap.has(res.id)) {
+          restaurantsMap.set(res.id, res);
+        }
+      });
+      
+      const all = Array.from(restaurantsMap.values());
       setUserRestaurants(all);
 
       if (all.length > 0 && !selectedRestaurant) {
