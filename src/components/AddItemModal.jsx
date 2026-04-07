@@ -111,7 +111,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories, editData }) => {
           const cleanFileName = itemName.trim().replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
           const fileName = `${cleanFileName}_${Date.now()}`;
           
-          const uploadResult = await uploadImageToImageKit(imageFile, fileName, 'RestaurantItems');
+          const uploadResult = await uploadImageToImageKit(imageFile, fileName, 'Restaurant-Pro-Images');
           imageUrl = uploadResult.url;
           toast.success('Image uploaded successfully!');
         } catch (uploadError) {

@@ -61,10 +61,10 @@ const getAuthenticationParameters = async () => {
  * Upload image to ImageKit
  * @param {File} file - The image file to upload
  * @param {string} fileName - The name to save the file as
- * @param {string} folder - The folder path in ImageKit (default: 'RestaurantItems')
+ * @param {string} folder - The folder path in ImageKit (default: 'Restaurant-Pro-Images')
  * @returns {Promise<{url: string, fileId: string}>} - The uploaded image URL and file ID
  */
-export const uploadImageToImageKit = async (file, fileName, folder = 'RestaurantItems') => {
+export const uploadImageToImageKit = async (file, fileName, folder = 'Restaurant-Pro-Images') => {
   try {
     // Convert file to base64
     const base64File = await fileToBase64(file);
