@@ -19,6 +19,7 @@ const BillingPage = () => {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [bills, setBills] = useState([]);
+  const [openBills, setOpenBills] = useState([]); // Separate state for table counters
   const [loading, setLoading] = useState(true);
   
   // Add Bill Section States
@@ -93,40 +94,47 @@ const BillingPage = () => {
     const fetchInitialData = async () => {
       if (!selectedRestaurant) return;
       try {
-        // Fetch static data in parallel (floors, tables, categories, items)
-        const [floorsSnap, tablesSnap, categoriesSnap, itemsSnap] = await Promise.all([
+        // Fetch static data and ALL open bills (for table counters) + Recent bills
+        // Simplified queries (no orderBy with where) to avoid composite index requirements
+        const [floorsSnap, tablesSnap, categoriesSnap, itemsSnap, openBillsSnap, billsSnap] = await Promise.all([
           getDocs(query(collection(db, 'floors'), where('restaurantId', '==', selectedRestaurant.id))),
           getDocs(query(collection(db, 'tables'), where('restaurantId', '==', selectedRestaurant.id))),
           getDocs(query(collection(db, 'categories'), where('restaurantId', '==', selectedRestaurant.id))),
-          getDocs(query(collection(db, 'items'), where('restaurantId', '==', selectedRestaurant.id)))
+          getDocs(query(collection(db, 'items'), where('restaurantId', '==', selectedRestaurant.id))),
+          getDocs(query(collection(db, 'bills'), where('restaurantId', '==', selectedRestaurant.id), where('status', '==', 'open'))),
+          getDocs(query(collection(db, 'bills'), where('restaurantId', '==', selectedRestaurant.id), limit(ITEMS_PER_PAGE * 2)))
         ]);
         
-        const sortData = (data) => data.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        const sortData = (data) => [...data].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
         setFloors(sortData(floorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
         setTables(sortData(tablesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
         setCategories(sortData(categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
         setItems(sortData(itemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
         
-        // Fetch bills with pagination
-        const billsQuery = query(
-          collection(db, 'bills'), 
-          where('restaurantId', '==', selectedRestaurant.id),
-          orderBy('createdAt', 'desc'), 
-          limit(ITEMS_PER_PAGE)
-        );
-        const billsSnap = await getDocs(billsQuery);
-        const billsData = billsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBills(billsData);
-        setLastVisible(billsSnap.docs[billsSnap.docs.length - 1]);
+        // Set ALL open bills for UI counters
+        const openBillsData = openBillsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setOpenBills(openBillsData);
         
-        // Get total count and stats from the same data (no extra reads)
-        setTotalBills(billsData.length); // Approximate - will be updated when paginating
-        fetchBillStats(billsData); // Pass bills data to avoid re-fetching
+        // Recent bills - sort in memory to avoid index issues
+        const billsData = sortData(billsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))).slice(0, ITEMS_PER_PAGE);
+        setBills(billsData);
+        
+        if (billsSnap.docs.length > 0) {
+          setLastVisible(billsSnap.docs[billsSnap.docs.length - 1]);
+        }
+        
+        // Get total count
+        const countSnap = await getCountFromServer(query(collection(db, 'bills'), where('restaurantId', '==', selectedRestaurant.id)));
+        setTotalBills(countSnap.data().count);
+        
+        // Stats - based on the larger fetch for better accuracy
+        fetchBillStats(billsData);
         
         setLoading(false);
       } catch (error) {
         console.error('Error fetching initial data:', error);
+        toast.error('Failed to load data. Please check index requirements in console.');
         setLoading(false);
       }
     };
@@ -236,6 +244,22 @@ const BillingPage = () => {
       setItems(itemsData);
     } catch (error) {
       console.error('Error fetching items:', error);
+    }
+  };
+
+  const fetchOpenBills = async () => {
+    if (!selectedRestaurant) return;
+    try {
+      const q = query(
+        collection(db, 'bills'),
+        where('restaurantId', '==', selectedRestaurant.id),
+        where('status', '==', 'open')
+      );
+      const querySnapshot = await getDocs(q);
+      const openBillsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setOpenBills(openBillsData);
+    } catch (error) {
+      console.error('Error fetching open bills:', error);
     }
   };
 
@@ -796,6 +820,7 @@ const BillingPage = () => {
       setBillItems(updatedItemsWithOrders);
       setSavedDiscount(discount); // Apply discount after save
       fetchBills(1);
+      fetchOpenBills(); // Refresh table counters
       fetchTotalBillsCount();
       fetchBillStats();
       
@@ -1098,6 +1123,7 @@ const BillingPage = () => {
       // Reset form
       resetBillForm();
       fetchBills(1);
+      fetchOpenBills(); // Refresh table counters
       fetchTotalBillsCount();
       fetchBillStats();
     } catch (error) {
@@ -1339,7 +1365,7 @@ const BillingPage = () => {
                 {/* Tables Grid */}
                 <div className="grid grid-cols-6 sm:grid-cols-6 lg:grid-cols-3 gap-1.5 flex-1 overflow-y-auto pr-1 scrollbar-thin content-start">
                   {filteredTables.map(table => {
-                    const openBillsCount = bills.filter(bill => bill.tableId === table.id && bill.status === 'open').length;
+                    const openBillsCount = openBills.filter(bill => bill.tableId === table.id && bill.status === 'open').length;
                     return (
                       <button
                         key={table.id}
@@ -1353,8 +1379,8 @@ const BillingPage = () => {
                         }`}
                       >
                         <span className="font-mono font-bold text-[10px] md:text-xs tracking-tighter">{table.shortCode}</span>
-                        {openBillsCount > 0 && selectedTable?.id !== table.id && (
-                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-orange-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+                        {openBillsCount > 0 && (
+                          <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 ${selectedTable?.id === table.id ? 'bg-white text-[#ec2b25]' : 'bg-orange-500 text-white'} text-[8px] font-black rounded-full flex items-center justify-center shadow-sm`}>
                             {openBillsCount}
                           </span>
                         )}
@@ -1451,43 +1477,33 @@ const BillingPage = () => {
                 </div>
 
                 {/* Items List */}
-                <div ref={itemsListRef} className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 overflow-y-auto pr-1 scrollbar-thin content-start">
+                <div ref={itemsListRef} className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 overflow-y-auto pr-1 scrollbar-thin content-start">
                 {filteredItems.map(item => {
                   const itemCategory = categories.find(cat => cat.id === item.categoryId);
                   return (
                     <button
                       key={item.id}
                       onClick={() => addItemToBill(item)}
-                      className="p-2 border border-gray-200 hover:border-[#ec2b25] hover:bg-gray-50 text-left cursor-pointer transition-colors flex flex-row items-center gap-3"
+                      className="group border border-gray-200 hover:border-[#ec2b25] hover:bg-gray-50 text-left cursor-pointer transition-all flex flex-col items-center p-2 h-fit"
                     >
-                      {/* Image - Left Side */}
-                      <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {/* Image - Top */}
+                      <div className="w-full aspect-square bg-gray-50 flex items-center justify-center flex-shrink-0 overflow-hidden mb-2 relative">
                         {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         ) : (
-                          <span className="text-2xl">🍽️</span>
+                          <span className="text-3xl">🍽️</span>
                         )}
+                        {/* Veg/Non-veg Symbol overlay */}
+                        <div className={`absolute top-1 right-1 w-4 h-4 bg-white border ${item.type === 'veg' ? 'border-green-600' : item.type === 'egg' ? 'border-yellow-600' : 'border-red-600'} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                          <div className={`w-2 h-2 rounded-full ${getFoodTypeColor(item.type)}`}></div>
+                        </div>
                       </div>
                       
-                      {/* Right Side - Details */}
-                      <div className="flex-1 min-w-0">
-                        {/* Veg/Non-veg Symbol + Name */}
-                        <div className="flex items-start gap-1 mb-1">
-                          <div className={`w-3 h-3 md:w-4 md:h-4 border ${item.type === 'veg' ? 'border-green-600' : item.type === 'egg' ? 'border-yellow-600' : 'border-red-600'} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${getFoodTypeColor(item.type)}`}></div>
-                          </div>
-                          <p className="font-medium text-xs md:text-sm leading-tight line-clamp-2">{item.name}</p>
-                        </div>
-                        
-                        {/* Category */}
-                        {itemCategory && (
-                          <p className="text-xs text-gray-500 mb-1 truncate">
-                            {itemCategory.emoji} {itemCategory.name}
-                          </p>
-                        )}
-                        
-                        {/* Price */}
-                        <p className="font-bold text-sm md:text-base text-[#ec2b25]">₹{item.price}</p>
+                      {/* Bottom - Details */}
+                      <div className="w-full flex flex-col items-center text-center px-1">
+                        <p className="font-bold text-xs md:text-[13px] leading-tight line-clamp-2 mb-1 h-8 flex items-center justify-center">{item.name}</p>
+                        <p className="font-black text-sm md:text-base text-[#ec2b25]">₹{item.price}</p>
+                        {item.shortCode && <p className='text-[10px] text-gray-400 font-mono mt-1'>#{item.shortCode}</p>}
                       </div>
                     </button>
                   );
