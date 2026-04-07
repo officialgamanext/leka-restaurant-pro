@@ -106,6 +106,41 @@ export const uploadImageToImageKit = async (file, fileName, folder = 'Restaurant
   }
 };
 
+/**
+ * List files from ImageKit
+ * @param {Object} options - List options (path, limit, skip)
+ * @returns {Promise<Array>} - List of files
+ */
+export const listFilesFromImageKit = async ({ path = 'Restaurant-Pro-Images', limit = 32, skip = 0 } = {}) => {
+  try {
+    const authHeader = 'Basic ' + btoa(IMAGEKIT_PRIVATE_KEY + ':');
+    
+    const url = new URL('https://api.imagekit.io/v1/files');
+    url.searchParams.append('path', path);
+    url.searchParams.append('limit', limit);
+    url.searchParams.append('skip', skip);
+    url.searchParams.append('sort', 'ASC_CREATED');
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to list files');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error listing files from ImageKit:', error);
+    throw error;
+  }
+};
+
 export default {
-  uploadImageToImageKit
+  uploadImageToImageKit,
+  listFilesFromImageKit
 };

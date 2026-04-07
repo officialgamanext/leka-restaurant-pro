@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Loader2, ChevronDown, Search, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { uploadImageToImageKit } from '../utils/imagekit';
+import ImagePickerModal from './ImagePickerModal';
 
 const FOOD_TYPES = [
   { value: 'veg', label: 'Vegetarian', color: 'bg-green-500', borderColor: 'border-green-600' },
@@ -24,6 +25,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories, editData }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [existingImage, setExistingImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const fileInputRef = useRef(null);
 
   // Update form when editData changes
@@ -68,6 +70,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories, editData }) => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
+      setExistingImage(null); // Clear library selection if new file picked
     }
   };
 
@@ -104,7 +107,7 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories, editData }) => {
       let imageUrl = existingImage || null;
       
       // Upload new image if selected
-      if (imageFile) {
+      if (imagePreview && imageFile) {
         setUploadingImage(true);
         try {
           // Clean item name for file name
@@ -170,11 +173,11 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories, editData }) => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-      <div className="bg-white w-full max-w-md p-4 md:p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white w-full max-w-md p-4 md:p-6 max-h-[90vh] overflow-y-auto rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900">{editData ? 'Edit Item' : 'Add Item'}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 cursor-pointer">
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 cursor-pointer rounded-lg">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -186,48 +189,55 @@ const AddItemModal = ({ isOpen, onClose, onSave, categories, editData }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Item Image
             </label>
-            <div className="border-2 border-dashed border-gray-300 p-4 text-center hover:border-[#ec2b25] transition-colors">
+            <div className="border-2 border-dashed border-gray-200 p-4 text-center hover:border-[#ec2b25] transition-colors rounded-xl bg-gray-50/50">
               {imagePreview || existingImage ? (
                 <div className="relative">
                   <img 
                     src={imagePreview || existingImage} 
                     alt="Item preview" 
-                    className="w-full h-40 object-cover mx-auto"
+                    className="w-full h-40 object-cover mx-auto rounded-lg shadow-sm"
                   />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 text-sm text-[#ec2b25] hover:underline cursor-pointer"
-                  >
-                    Change Image
-                  </button>
+                  <div className="flex items-center justify-center gap-3 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowImagePicker(true)}
+                      className="text-xs px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:border-[#ec2b25] hover:text-[#ec2b25] transition-all cursor-pointer rounded-lg font-bold"
+                    >
+                      Change from Gallery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer rounded-lg font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="cursor-pointer py-6"
+                  onClick={() => setShowImagePicker(true)}
+                  className="cursor-pointer py-6 group"
                 >
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 mb-1">Click to upload image</p>
-                  <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
+                  <div className="w-12 h-12 bg-white border border-gray-200 text-gray-400 group-hover:text-[#ec2b25] group-hover:border-[#ec2b25] rounded-full flex items-center justify-center mx-auto mb-3 transition-all">
+                    <ImageIcon className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm text-gray-700 font-bold group-hover:text-[#ec2b25] transition-colors">Choose from Gallery</p>
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">Upload or select existing</p>
                 </div>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
             </div>
           </div>
+
+          <ImagePickerModal
+            isOpen={showImagePicker}
+            onClose={() => setShowImagePicker(false)}
+            onSelect={(url) => {
+              setExistingImage(url);
+              setImagePreview(null);
+              setImageFile(null);
+            }}
+          />
 
           {/* Item Name */}
           <div>
