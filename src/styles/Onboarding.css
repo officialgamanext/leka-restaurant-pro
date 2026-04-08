@@ -1,0 +1,332 @@
+.onboarding-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: radial-gradient(circle at top right, #fef2f2 0%, #f7f9fc 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.onboarding-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(#ec2b25 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.onboarding-content {
+  width: 100%;
+  max-width: 700px;
+  z-index: 1;
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2.5rem;
+}
+
+.onboarding-welcome h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-welcome p {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-top: 0.25rem;
+}
+
+.logout-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.logout-link:hover {
+  color: #ec2b25;
+  border-bottom-color: rgba(236, 43, 37, 0.2);
+}
+
+.onboarding-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 2.5rem;
+  border-radius: 4px;
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.03),
+    0 8px 10px -6px rgba(0, 0, 0, 0.03);
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.add-new-btn {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #ec2b25;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: opacity 0.2s ease;
+}
+
+.add-new-btn:hover {
+  opacity: 0.7;
+}
+
+.restaurant-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.restaurant-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.restaurant-item:hover {
+  background: white;
+  border-color: #ec2b25;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateX(4px);
+}
+
+.restaurant-item.inactive {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.res-info-main {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.res-icon-box {
+  padding: 0.75rem;
+  background: white;
+  border-radius: 4px;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.restaurant-item:hover .res-icon-box {
+  color: #ec2b25;
+  border-color: rgba(236, 43, 37, 0.2);
+}
+
+.res-name {
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: #1e293b;
+  margin-bottom: 0.125rem;
+}
+
+.res-address {
+  font-size: 0.8125rem;
+  color: #64748b;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.res-badges {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.badge-owner { background: #eff6ff; color: #1d4ed8; }
+.badge-staff { background: #f5f3ff; color: #6d28d9; }
+.badge-active { background: #f0fdf4; color: #15803d; }
+.badge-expired { background: #fef2f2; color: #dc2626; }
+
+.onboarding-footer {
+  width: 100%;
+  max-width: 700px;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.support-contacts {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.contact-icon {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #ec2b25;
+}
+
+.contact-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.contact-value {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.premium-tag {
+  text-align: right;
+}
+
+.premium-label {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #ec2b25;
+}
+
+.premium-desc {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Spinner Styles */
+.spinner-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f7f9fc;
+}
+
+.custom-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid rgba(236, 43, 37, 0.1);
+  border-top-color: #ec2b25;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 640px) {
+  .onboarding-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  
+  .logout-link {
+    padding-left: 0;
+  }
+  
+  .onboarding-card {
+    padding: 1.5rem;
+  }
+  
+  .onboarding-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+  
+  .support-contacts {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+}
