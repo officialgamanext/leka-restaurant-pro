@@ -21,6 +21,41 @@
   background-size: 24px 24px;
   opacity: 0.05;
   pointer-events: none;
+  z-index: 0;
+}
+
+.onboarding-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 1;
+  filter: contrast(150%) brightness(100%);
+}
+
+.bg-blob {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(236, 43, 37, 0.08) 0%, rgba(236, 43, 37, 0) 70%);
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+  animation: float 25s infinite alternate ease-in-out;
+}
+
+.blob-1 { top: -200px; right: -100px; }
+.blob-2 { bottom: -200px; left: -100px; animation-delay: -7s; }
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(60px, 40px) scale(1.15); }
 }
 
 .onboarding-content {

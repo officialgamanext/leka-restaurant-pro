@@ -91,6 +91,8 @@ const Onboarding = () => {
 
   return (
     <div className="onboarding-container">
+      <div className="bg-blob blob-1"></div>
+      <div className="bg-blob blob-2"></div>
       <div className="onboarding-content">
         <div className="onboarding-header">
           <div className="onboarding-welcome">

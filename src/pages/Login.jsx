@@ -63,6 +63,8 @@ const Login = () => {
 
   return (
     <div className="login-container">
+      <div className="bg-blob blob-1"></div>
+      <div className="bg-blob blob-2"></div>
       <div className="login-card">
         {/* Logo/Brand Section */}
         <div className="brand-section">
